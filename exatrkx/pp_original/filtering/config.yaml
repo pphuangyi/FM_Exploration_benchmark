@@ -1,0 +1,31 @@
+data:
+    mmap_root: /home/sphenix_fm/data/pp_100k_mmap-with_charge
+    gnn: true
+    target: seg
+processor:
+    embedding_cut     : 2
+    filtering_cut     : .15
+    distance_power    : 2
+    subset_size       : 200
+    continuous_phi    : true
+    radius_normalizer : 48
+embedding: ../embedding/checkpoints/ckpt_last.script
+# If we use input embedding, the input size of the
+# filtering model should be 12 + 12 = 24
+# else, the input size is 5 + 5 = 10
+use_embedding: false
+# use_embedding: true
+filtering:
+    input_size: 10
+    # input_size: 24
+    sizes: [512, 512, 512, 1]
+    hidden_activation: 'Tanh'
+    output_activation: null
+    layer_norm: true
+checkpointing:
+    checkpoint_path: ./checkpoints_raw
+    save_frequency: 10
+    resume: true
+train:
+    num_epochs: 100
+    batch_size: 4

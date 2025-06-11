@@ -1,0 +1,13 @@
+model:
+    input_features: 12
+    hidden_features: [256, 256]
+    output_features: 1
+    hidden_activ:
+        name: leakyrelu
+        negative_slope: .2
+    output_activ: null
+    hidden_norm:
+        name: layer
+    output_norm: null
+    input_dropout: 0
+    hidden_dropout: 0

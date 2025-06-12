@@ -1,0 +1,66 @@
+data:
+    mmap_root: /global/cfs/cdirs/m4722/NPFM/data/pp_100k_mmap-particle_ids/
+    gnn: true
+    target:
+        - seg
+        - reg # for calculating pT
+    load_edge: true
+    multiplicity_max: 3200
+data_processor:
+    noise_threshold: 0.06
+    max_num_edges: 80000
+    continuous_phi: True
+    radius_normalizer: 48
+gnn_model:
+    hidden: &hidden 128
+    mlp: &mlp
+        hidden_features_list: [*hidden, *hidden]
+        output_features: *hidden
+        hidden_activ:
+            name: relu
+            # negative_slope: .2
+        output_activ: null
+        hidden_norm:
+            name: layer
+        output_norm:
+            name: layer
+        input_dropout: 0
+        hidden_dropout: 0
+    node_encoder:
+        # input_features: 12
+        input_features: 5
+        <<: *mlp
+    edge_encoder:
+        input_features: -1  # needs to be compute at initialization
+        <<: *mlp
+    node_network:
+        input_features: -1  # needs to be compute at initialization
+        <<: *mlp
+    edge_network:
+        input_features: -1  # needs to be compute at initialization
+        <<: *mlp
+    pred_network:
+        input_features: -1  # needs to be compute at initialization
+        hidden_features_list: [*hidden, *hidden]
+        output_features: 1
+        hidden_activ:
+            name: relu
+            # negative_slope: .2
+        output_activ: null
+        hidden_norm:
+            name: layer
+        output_norm:
+            name: layer
+        input_dropout: 0
+        hidden_dropout: 0
+    gnn:
+        pred_obj: node
+        aggregation: add_max
+        num_iterations: 8
+checkpointing:
+    checkpoint_path: ./checkpoints
+    save_frequency: 10
+    resume: true
+train:
+    num_epochs: 30
+    batch_size: 2

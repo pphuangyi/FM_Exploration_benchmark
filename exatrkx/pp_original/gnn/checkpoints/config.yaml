@@ -1,0 +1,64 @@
+data:
+    mmap_root: /home/sphenix_fm/data/pp_100k_mmap-with_charge
+    gnn: true
+    target: seg
+    load_edge: true
+    multiplicity_max: 3200
+data_processor:
+    max_num_edges: 80000
+    continuous_phi: True
+    radius_normalizer: 48
+graph:
+    mode: union
+gnn_model:
+    hidden: &hidden 128
+    mlp: &mlp
+        hidden_features_list: [*hidden, *hidden]
+        output_features: *hidden
+        hidden_activ:
+            name: relu
+            # negative_slope: .2
+        output_activ: null
+        hidden_norm:
+            name: layer
+        output_norm:
+            name: layer
+        input_dropout: 0
+        hidden_dropout: 0
+    node_encoder:
+        # input_features: 12
+        input_features: 5
+        <<: *mlp
+    edge_encoder:
+        input_features: -1  # needs to be compute at initialization
+        <<: *mlp
+    node_network:
+        input_features: -1  # needs to be compute at initialization
+        <<: *mlp
+    edge_network:
+        input_features: -1  # needs to be compute at initialization
+        <<: *mlp
+    classifier:
+        input_features: -1  # needs to be compute at initialization
+        hidden_features_list: [*hidden, *hidden]
+        output_features: 1
+        hidden_activ:
+            name: relu
+            # negative_slope: .2
+        output_activ: null
+        hidden_norm:
+            name: layer
+        output_norm:
+            name: layer
+        input_dropout: 0
+        hidden_dropout: 0
+    gnn:
+        aggregation: add_max
+        num_iterations: 8
+checkpointing:
+    checkpoint_path: ./checkpoints
+    save_frequency: 10
+    resume: true
+train:
+    num_epochs: 30
+    batch_size: 1

@@ -19,8 +19,6 @@ class InteractionGNN(nn.Module):
                  node_network,
                  edge_network,
                  pred_network,
-                 # pred_obj can be either 'node' or 'edge'
-                 pred_obj,
                  aggregation,
                  num_iterations):
 
@@ -31,7 +29,6 @@ class InteractionGNN(nn.Module):
         self.node_network = node_network
         self.edge_network = edge_network
         self.pred_network = pred_network
-        self.pred_obj = pred_obj
 
         self.aggregation = aggregation
         self.num_iterations = num_iterations
@@ -52,16 +49,21 @@ class InteractionGNN(nn.Module):
             nodes, edges = self._message_step(nodes, edges, start_index, end_index)
 
         # get prediction input and calculate predition output
-        if self.pred_obj == 'edge':
-            pred_input = torch.hstack([nodes[start_index], nodes[end_index], edges])
-        elif self.pred_obj == 'node':
-            pred_input = nodes
-        else:
-            raise KeyError(f'Unknown prediction objective {self.pred_obj}!')
+        pred_output = {}
+        for key, network in self.pred_network.items():
+            if key == 'edge':
+                pred_input = torch.hstack([nodes[start_index], nodes[end_index], edges])
+            elif key == 'node':
+                pred_input = nodes
+            else:
+                raise KeyError(f'Unknown prediction objective {key}!')
 
-        pred_output = self.pred_network(pred_input)
-        if pred_output.shape[-1] == 1:
-            pred_output = pred_output.squeeze(1)
+            # squeeze the last dimension for scalar output.
+            output = network(pred_input)
+            if output.shape[-1] == 1:
+                output = output.squeeze(1)
+
+            pred_output[key] = output
 
         return pred_output
 
@@ -129,7 +131,6 @@ def assemble_gnn(model_config):
     edge_encoder_config = model_config['edge_encoder']
     node_network_config = model_config['node_network']
     edge_network_config = model_config['edge_network']
-    pred_network_config = model_config['pred_network']
 
     # configurations control the working of message passing in the GNN
     gnn_config = model_config['gnn']
@@ -140,19 +141,21 @@ def assemble_gnn(model_config):
     node_network_config.update({'input_features': concat_factor * hidden_features})
     edge_network_config.update({'input_features': 3 * hidden_features})
 
-    if gnn_config['pred_obj'] == 'edge':
-        pred_network_config.update({'input_features': 3 * hidden_features})
-    elif gnn_config['pred_obj'] == 'node':
-        pred_network_config.update({'input_features': hidden_features})
-    else:
-        raise KeyError(f'Unknown prediction objective {pred_obj}!')
+    pred_network = nn.ModuleDict()
+    for key, config in model_config['pred_network'].items():
+        if key == 'edge':
+            config.update({'input_features': 3 * hidden_features})
+        elif key == 'node':
+            config.update({'input_features': hidden_features})
+        else:
+            raise KeyError(f'Unknown prediction objective {pred_obj}!')
+        pred_network[key] = MLP(**config)
 
     # construct sub-models
     node_encoder = MLP(**node_encoder_config)
     edge_encoder = MLP(**edge_encoder_config)
     node_network = MLP(**node_network_config)
     edge_network = MLP(**edge_network_config)
-    pred_network = MLP(**pred_network_config)
 
     return  InteractionGNN(node_encoder = node_encoder,
                            edge_encoder = edge_encoder,

@@ -1,5 +1,7 @@
 data:
-    mmap_root: /global/cfs/cdirs/m4722/NPFM/data/pp_100k_mmap-particle_ids/
+    mmap_root: /home/sphenix_fm/data/pp_100k_mmap-with_charge/
+    # mmap_root: /home/sphenix_fm/data/pp_100k_mmap-particle_ids/
+    # mmap_root: /global/cfs/cdirs/m4722/NPFM/data/pp_100k_mmap-particle_ids/
     gnn: true
     target:
         - seg
@@ -17,15 +19,15 @@ gnn_model:
         hidden_features_list: [*hidden, *hidden]
         output_features: *hidden
         hidden_activ:
-            name: relu
-            # negative_slope: .2
+            name: leakyrelu
+            negative_slope: .2
         output_activ: null
         hidden_norm:
-            name: layer
+            name: batch
         output_norm:
-            name: layer
-        input_dropout: 0
-        hidden_dropout: 0
+            name: batch
+        input_dropout: .2
+        hidden_dropout: .2
     node_encoder:
         # input_features: 12
         input_features: 5
@@ -40,27 +42,22 @@ gnn_model:
         input_features: -1  # needs to be compute at initialization
         <<: *mlp
     pred_network:
-        input_features: -1  # needs to be compute at initialization
-        hidden_features_list: [*hidden, *hidden]
-        output_features: 1
-        hidden_activ:
-            name: relu
-            # negative_slope: .2
-        output_activ: null
-        hidden_norm:
-            name: layer
-        output_norm:
-            name: layer
-        input_dropout: 0
-        hidden_dropout: 0
+        node:
+            input_features: -1  # needs to be compute at initialization
+            <<: *mlp
+            output_features: 1
+        edge:
+            input_features: -1  # needs to be compute at initialization
+            <<: *mlp
+            output_features: 1
     gnn:
-        pred_obj: node
         aggregation: add_max
-        num_iterations: 8
+        num_iterations: 4
 checkpointing:
-    checkpoint_path: ./checkpoints
+    checkpoint_path: ./checkpoints_joint
     save_frequency: 10
     resume: true
 train:
     num_epochs: 30
-    batch_size: 2
+    batch_size: 1
+    batches_per_epoch: 5000

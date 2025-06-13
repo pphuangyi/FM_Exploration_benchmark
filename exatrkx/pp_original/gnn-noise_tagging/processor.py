@@ -99,4 +99,4 @@ class Processor:
     def get_noise_tag(self, particles):
         px, py = particles[:, :2].T
         pt = torch.sqrt(px ** 2 + py ** 2)
-        return pt > self.noise_threshold
+        return pt < self.noise_threshold

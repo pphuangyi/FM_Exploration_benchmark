@@ -76,10 +76,22 @@ def run_epoch(data_processor,
             edge_index = edge_index,
             edge_batch = edge_batch
         )
+        edge_labels = track_ids[head_indices] == track_ids[tail_indices]
+        edge_fraction = (edge_labels.sum() / edge_labels.numel()).item()
+        noise_fraction = (noise_tag.sum() / noise_tag.numel()).item()
 
         # gnn model
-        logits = gnn_model(inputs, head_indices, tail_indices)
-        loss = loss_fn(logits.squeeze(-1), noise_tag.float())
+        pred_output = gnn_model(inputs, head_indices, tail_indices)
+        loss_dict = {}
+        loss = 0
+        if 'node' in pred_output:
+            loss_item = loss_fn(pred_output['node'], noise_tag.float())
+            loss_dict['node'] = loss_item
+            loss += loss_item
+        if 'edge' in pred_output:
+            loss_item = loss_fn(pred_output['edge'], edge_labels.float())
+            loss_dict['edge'] = loss_item
+            loss += loss_item
 
         if optimizer is not None:
             optimizer.zero_grad()
@@ -103,8 +115,11 @@ def run_epoch(data_processor,
         #         false_neg_rate = (false_neg / neg).item()
 
         # bookkeeping
+        cumulator.update({f'loss_{key}': val.item() for key, val in loss_dict.items()})
         cumulator.update({
             'loss'                         : loss.item(),
+            'noise_fraction'               : noise_fraction,
+            'edge_fraction'                : edge_fraction,
             # 'recall'         : recall.item(),
             # 'precision'      : precision.item(),
             # 'auc'                          : auc,
@@ -162,6 +177,7 @@ def train():
     resume          = config['checkpointing']['resume']
 
     # training parameters
+    batches_per_epoch = config['train']['batches_per_epoch']
     num_epochs = config['train']['num_epochs']
     batch_size = config['train']['batch_size']
 
@@ -174,7 +190,7 @@ def train():
 
     optimizer = AdamW(
         gnn_model.parameters(),
-        lr=0.0001,
+        lr=0.00001,
         betas=(0.9, 0.999),
         eps=1e-08,
         amsgrad=True,
@@ -234,9 +250,10 @@ def train():
                                gnn_model,
                                loss_fn,
                                train_ldr,
-                               desc      = desc,
-                               optimizer = optimizer,
-                               device    = device)
+                               desc              = desc,
+                               optimizer         = optimizer,
+                               batches_per_epoch = batches_per_epoch,
+                               device            = device)
 
         # validation
         with torch.no_grad():
@@ -246,8 +263,9 @@ def train():
                                    gnn_model,
                                    loss_fn,
                                    valid_ldr,
-                                   desc   = desc,
-                                   device = device)
+                                   desc              = desc,
+                                   batches_per_epoch = batches_per_epoch,
+                                   device            = device)
 
         # update learning rate
         scheduler.step()

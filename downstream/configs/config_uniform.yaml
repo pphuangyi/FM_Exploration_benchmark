@@ -1,0 +1,63 @@
+data:
+    # mmap_root: /home/sphenix_fm/data/pp_100k_mmap-with_charge/
+    mmap_root: /home/sphenix_fm/data/pp_100k_mmap-particle_ids-no_sorting/
+    # mmap_root: /global/cfs/cdirs/m4722/NPFM/data/pp_100k_mmap-particle_ids-no_sorting/
+    gnn: true
+    target:
+        - seg
+        - reg # for calculating pT
+        # - pid
+        # - mid
+    load_edge: false
+data_processor:
+    k: 50
+    max_radius: .2
+    target: 'noise_tagging'
+    noise_threshold: 0.06
+    continuous_phi: true
+    radius_normalizer: 48
+model:
+    encoder:
+        input_features: 5
+        hidden_features_list: [128, 128]
+        output_features: &hidden 128
+        hidden_activ:
+            name: leakyrelu
+            negative_slope: .2
+        output_activ: null
+        hidden_norm:
+            name: batch
+        output_norm:
+            name: batch
+        input_dropout: 0
+        hidden_dropout: 0
+    predictor:
+        input_features: *hidden
+        hidden_features_list: [128, 64]
+        output_features: 2 # for mid and noise tagging
+        # output_features: 5 # for pid
+        hidden_activ:
+            name: leakyrelu
+            negative_slope: .2
+        output_activ: null
+        hidden_norm:
+            name: batch
+        output_norm:
+            name: batch
+        input_dropout: 0
+        hidden_dropout: 0
+    gnn:
+        layer_name: GCNConv
+        num_layers: 4
+        hidden_channels: *hidden
+        activ:
+            name: leakyrelu
+            negative_slope: .2
+checkpointing:
+    checkpoint_path: ./checkpoints
+    save_frequency: 10
+    resume: true
+train:
+    num_epochs: 30
+    batch_size: 32
+    batches_per_epoch: 5000

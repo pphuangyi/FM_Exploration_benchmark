@@ -1,0 +1,51 @@
+data:
+    mmap_root: /home/sphenix_fm/data/pp_100k_mmap-with_charge
+    gnn: true
+    target: seg
+data_processor:
+    num_input_neighbors   : 3
+    num_knn_neighbors     : 20
+    knn_query_fraction    : .02
+    random_query_fraction : 0
+    continuous_phi        : True
+    radius_normalizer     : 48
+embedding_model:
+    input_features: 12
+    hidden_features_list: [128, 64]
+    output_features: 32
+    hidden_activ:
+        name: leakyrelu
+        negative_slope: .2
+    output_activ: null
+    hidden_norm:
+        name: batch
+    output_norm:
+        name: batch
+    input_dropout: 0
+    hidden_dropout: 0
+filter_model:
+    input_features: -1
+    hidden_features_list: [128, 64]
+    output_features: 1
+    hidden_activ:
+        name: leakyrelu
+        negative_slope: .2
+    output_activ: null
+    hidden_norm:
+        name: batch
+    output_norm:
+        name: batch
+    input_dropout: 0
+    hidden_dropout: 0
+checkpointing:
+    checkpoint_path: ./checkpoints
+    save_frequency: 10
+    resume: true
+train:
+    num_epochs: 200
+    num_warmup_epochs: 10
+    batch_size: 16
+    batches_per_epoch: 1000
+    learning_rate: 0.0001
+    sched_steps: 20
+    sched_gamma: .95
